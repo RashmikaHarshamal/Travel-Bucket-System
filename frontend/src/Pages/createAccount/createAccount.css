@@ -1,0 +1,104 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: radial-gradient(circle at left, #ccc 20%, #999 80%);
+}
+
+.signup-box {
+  display: flex;
+  background-color: rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  width: 600px;
+  max-width: 95vw;
+  gap: 30px;
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.girl-image {
+  height: 400px;
+  max-height: 400px;
+  width: auto;
+}
+
+.right-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+
+h2 {
+  margin-bottom: 20px;
+  margin-top: -10px;
+  font-size: 50px;
+  text-align: center;
+}
+
+.green {
+  color: green;
+}
+
+.dark {
+  color: black;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+label {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: green;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 40%;
+  align-self: center;
+}
+
+.links {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.links a {
+  color: green;
+  text-decoration: none;
+}
+
+.links span {
+  display: block;
+  margin-top: 5px;
+}
