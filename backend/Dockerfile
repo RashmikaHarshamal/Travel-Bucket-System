@@ -1,4 +1,5 @@
 # backend/Dockerfile
+# syntax=docker/dockerfile:1.6
 # ---------- BUILD STAGE ----------
 FROM maven:3.9.4-eclipse-temurin-17 AS builder
 WORKDIR /workspace/app
@@ -6,11 +7,11 @@ WORKDIR /workspace/app
 # cache dependencies faster
 COPY pom.xml mvnw ./
 COPY .mvn .mvn
-RUN mvn -B -f pom.xml -DskipTests dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 mvn -B -f pom.xml -DskipTests dependency:go-offline
 
 # copy source and build
 COPY src ./src
-RUN mvn -B -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
 
 # ---------- RUNTIME STAGE ----------
 FROM eclipse-temurin:17-jdk

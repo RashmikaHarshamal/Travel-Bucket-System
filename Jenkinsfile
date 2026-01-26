@@ -2,17 +2,19 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_DIR = "/mnt/d/Projects/Travel Bucket System"
         FRONTEND_IMAGE = "my-frontend-image"
         BACKEND_IMAGE = "my-backend-image"
         DOCKER_HUB_USER = "rashmikaharshamal" // must be all lowercase (Docker Hub usernames are)
-        DOCKER_BUILDKIT = '0' // Disable BuildKit globally to avoid buildx issues
+        DOCKER_BUILDKIT = '1'
+        COMPOSE_DOCKER_CLI_BUILD = '1'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo "🔄 Pulling code from GitHub..."
+                // Ensure no stale files remain from previous builds
+                deleteDir()
                 checkout scm
             }
         }
@@ -21,13 +23,13 @@ pipeline {
             steps {
                 script {
                     echo "🏗️ Building frontend Docker image..."
-                    dir("${PROJECT_DIR}/frontend") {
-                        sh "docker build -t ${FRONTEND_IMAGE}:latest ."
+                    dir('frontend') {
+                        sh "DOCKER_BUILDKIT=1 docker build -t ${FRONTEND_IMAGE}:latest ."
                     }
 
                     echo "🏗️ Building backend Docker image..."
-                    dir("${PROJECT_DIR}/backend") {
-                        sh "docker build -t ${BACKEND_IMAGE}:latest ."
+                    dir('backend') {
+                        sh "DOCKER_BUILDKIT=1 docker build -t ${BACKEND_IMAGE}:latest ."
                     }
                 }
             }
@@ -60,10 +62,8 @@ pipeline {
 
         stage('Run Containers') {
             steps {
-                dir("${PROJECT_DIR}") {
-                    echo "🚀 Starting containers using docker-compose..."
-                    sh 'docker compose up -d'
-                }
+                echo "🚀 Starting containers using docker-compose..."
+                sh 'docker compose up -d'
             }
         }
 

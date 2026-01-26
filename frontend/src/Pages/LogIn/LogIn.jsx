@@ -3,6 +3,7 @@ import './LogIn.css';
 import girlImage from './girl.png';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE } from '../../config/api';
 
 export default function LogIn() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function LogIn() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8080/api/v1/login", {
+      const response = await axios.post(`${API_BASE}/login`, {
         username,
         password
       });
@@ -23,7 +24,14 @@ export default function LogIn() {
         alert("Invalid credentials");
       }
     } catch (err) {
-      alert("Error logging in");
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 401) {
+        alert("Invalid credentials");
+      } else {
+        console.error(err);
+        alert(message || "Error logging in");
+      }
     }
   };
 

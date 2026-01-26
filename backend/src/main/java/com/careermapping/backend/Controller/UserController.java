@@ -3,7 +3,9 @@ package com.careermapping.backend.Controller;
 import com.careermapping.backend.DTO.UserDTO;
 import com.careermapping.backend.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -47,6 +49,10 @@ public class UserController {
 
     @PostMapping("/login")
     public UserDTO login(@RequestBody UserDTO userDTO) {
-        return userService.login(userDTO.getUsername(), userDTO.getPassword());
+        UserDTO loggedIn = userService.login(userDTO.getUsername(), userDTO.getPassword());
+        if (loggedIn == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+        }
+        return loggedIn;
     }
 }

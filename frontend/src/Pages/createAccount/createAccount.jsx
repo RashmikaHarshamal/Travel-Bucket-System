@@ -3,6 +3,7 @@ import './createAccount.css';
 import girlImage from './girl.png';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios'; // import axios
+import { API_BASE } from '../../config/api';
 
 export default function CreateAccount() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export default function CreateAccount() {
     }
 
     try {
-      await axios.post('http://localhost:8080/api/v1/adduser', {
+      await axios.post(`${API_BASE}/adduser`, {
         username: formData.username,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
@@ -41,7 +42,8 @@ export default function CreateAccount() {
       navigate('/login');
     } catch (err) {
       console.error(err);
-      alert("Error creating account!");
+      const message = err?.response?.data?.message;
+      alert(message || "Error creating account!");
     }
   };
 

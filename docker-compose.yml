@@ -30,7 +30,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: "http://backend:8080/api/v1"
+        # Use same-origin API calls; nginx in the frontend container proxies /api/* to the backend service.
+        VITE_API_BASE_URL: "/api/v1"
     container_name: frontend
     restart: unless-stopped
     ports:
