@@ -1,5 +1,4 @@
 # frontend/Dockerfile
-# syntax=docker/dockerfile:1.6
 # ---------- BUILD STAGE ----------
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -8,7 +7,7 @@ ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN npm ci
 COPY . .
 RUN npm run build
 
