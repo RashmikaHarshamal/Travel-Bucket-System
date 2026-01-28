@@ -33,7 +33,7 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 // Use withCredentials to safely handle Docker Hub password/token
-                withCredentials([string(credentialsId: 'docker-hub-password', variable: 'DOCKER_HUB_PASS')]) {
+                withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_HUB_PASS')]) {
                     echo "Logging into Docker Hub..."
                     sh """
                         echo \$DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin
