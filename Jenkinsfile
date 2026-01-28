@@ -19,12 +19,14 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
-                      DOCKER_BUILDKIT=1 docker build -t travel-frontend:latest .
+                      export DOCKER_BUILDKIT=1
+                      docker build -t travel-frontend:latest .
                     '''
                 }
                 dir('backend') {
                     sh '''
-                      DOCKER_BUILDKIT=1 docker build -t travel-backend:latest .
+                      export DOCKER_BUILDKIT=1
+                      docker build -t travel-backend:latest .
                     '''
                 }
             }
