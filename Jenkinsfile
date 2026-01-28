@@ -5,6 +5,7 @@ pipeline {
         FRONTEND_IMAGE = "travel-frontend"
         BACKEND_IMAGE  = "travel-backend"
         DOCKER_HUB_USER = "rashmikaharshamal"
+        DOCKER_BUILDKIT = "1"
     }
 
     stages {
