@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        FRONTEND_IMAGE = "travel-frontend"
-        BACKEND_IMAGE  = "travel-backend"
+        FRONTEND_IMAGE  = "travel-frontend"
+        BACKEND_IMAGE   = "travel-backend"
         DOCKER_HUB_USER = "rashmikaharshamal"
         DOCKER_BUILDKIT = "1"
     }
@@ -19,10 +19,10 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 dir('frontend') {
-                    sh 'DOCKER_BUILDKIT=1 docker build -t travel-frontend:latest .'
+                    sh 'docker build -t ${FRONTEND_IMAGE}:latest .'
                 }
                 dir('backend') {
-                    sh 'DOCKER_BUILDKIT=1 docker build -t travel-backend:latest .'
+                    sh 'docker build -t ${BACKEND_IMAGE}:latest .'
                 }
             }
         }
@@ -30,13 +30,15 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_HUB_PASS')]) {
-                    sh '''
-                      echo $DOCKER_HUB_PASS | docker login -u your-dockerhub-username --password-stdin
-                      docker tag travel-frontend:latest your-dockerhub-username/travel-frontend:latest
-                      docker tag travel-backend:latest your-dockerhub-username/travel-backend:latest
-                      docker push your-dockerhub-username/travel-frontend:latest
-                      docker push your-dockerhub-username/travel-backend:latest
-                    '''
+                    sh """
+                      echo \$DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin
+
+                      docker tag ${FRONTEND_IMAGE}:latest ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
+                      docker tag ${BACKEND_IMAGE}:latest  ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+
+                      docker push ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
+                      docker push ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+                    """
                 }
             }
         }
@@ -45,6 +47,15 @@ pipeline {
             steps {
                 sh 'docker compose up -d'
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully'
+        }
+        failure {
+            echo '❌ Pipeline failed'
         }
     }
 }
