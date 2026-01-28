@@ -18,10 +18,10 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 dir('frontend') {
-                    sh 'docker build -t travel-frontend:latest .'
+                    sh 'DOCKER_BUILDKIT=1 docker build -t travel-frontend:latest .'
                 }
                 dir('backend') {
-                    sh 'docker build -t travel-backend:latest .'
+                    sh 'DOCKER_BUILDKIT=1 docker build -t travel-backend:latest .'
                 }
             }
         }
