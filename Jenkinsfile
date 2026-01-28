@@ -5,7 +5,6 @@ pipeline {
         FRONTEND_IMAGE  = "travel-frontend"
         BACKEND_IMAGE   = "travel-backend"
         DOCKER_HUB_USER = "rashmikaharshamal"
-        DOCKER_BUILDKIT = "1"
     }
 
     stages {
@@ -19,10 +18,14 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 dir('frontend') {
-                    sh 'docker build -t ${FRONTEND_IMAGE}:latest .'
+                    sh '''
+                      DOCKER_BUILDKIT=1 docker build -t travel-frontend:latest .
+                    '''
                 }
                 dir('backend') {
-                    sh 'docker build -t ${BACKEND_IMAGE}:latest .'
+                    sh '''
+                      DOCKER_BUILDKIT=1 docker build -t travel-backend:latest .
+                    '''
                 }
             }
         }
@@ -33,11 +36,11 @@ pipeline {
                     sh """
                       echo \$DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin
 
-                      docker tag ${FRONTEND_IMAGE}:latest ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
-                      docker tag ${BACKEND_IMAGE}:latest  ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+                      docker tag travel-frontend:latest ${DOCKER_HUB_USER}/travel-frontend:latest
+                      docker tag travel-backend:latest  ${DOCKER_HUB_USER}/travel-backend:latest
 
-                      docker push ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
-                      docker push ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+                      docker push ${DOCKER_HUB_USER}/travel-frontend:latest
+                      docker push ${DOCKER_HUB_USER}/travel-backend:latest
                     """
                 }
             }
@@ -47,15 +50,6 @@ pipeline {
             steps {
                 sh 'docker compose up -d'
             }
-        }
-    }
-
-    post {
-        success {
-            echo '✅ Pipeline completed successfully'
-        }
-        failure {
-            echo '❌ Pipeline failed'
         }
     }
 }
