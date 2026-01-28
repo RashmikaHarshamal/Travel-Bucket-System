@@ -30,29 +30,24 @@ pipeline {
             }
         }
 
-        // stage('Push Docker Images') {
-        //     steps {
-        //         // Use withCredentials to safely handle Docker Hub password/token
-        //         withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_HUB_PASS')]) {
-        //             echo "Logging into Docker Hub..."
-        //             sh """
-        //                 echo \$DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin
-        //                 
-        //                 echo "Tagging frontend image..."
-        //                 docker tag ${FRONTEND_IMAGE}:latest ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
-        //                 
-        //                 echo "Tagging backend image..."
-        //                 docker tag ${BACKEND_IMAGE}:latest ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
-        //                 
-        //                 echo "Pushing frontend image..."
-        //                 docker push ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
-        //                 
-        //                 echo "Pushing backend image..."
-        //                 docker push ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
-        //             """
-        //         }
-        //     }
-        // }
+        stage('Push Docker Images') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-pass', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    echo "Logging into Docker Hub..."
+                    sh """
+                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                        
+                        echo "Tagging images..."
+                        docker tag ${FRONTEND_IMAGE}:latest ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
+                        docker tag ${BACKEND_IMAGE}:latest ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+                        
+                        echo "Pushing images..."
+                        docker push ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
+                        docker push ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+                    """
+                }
+            }
+        }
 
         stage('Run Containers') {
             steps {
