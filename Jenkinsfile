@@ -55,17 +55,8 @@ pipeline {
                 ]) {
                     sh """
                         echo "🚀 Deploying Docker containers on EC2..."
-
-                        # Ensure SSH known_hosts contains the EC2 server to avoid verification error
-                        mkdir -p ~/.ssh
-                        chmod 700 ~/.ssh
-                        ssh-keyscan -H 13.53.103.213 >> ~/.ssh/known_hosts
-
-                        # Copy deploy script to EC2
                         scp -i \$EC2_KEY scripts/deploy.sh \$EC2_USER@13.53.103.213:/home/\$EC2_USER/deploy.sh
-
-                        # Run deploy script on EC2 with Docker credentials
-                        ssh -i \$EC2_KEY \$EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh \$DOCKER_USER \$DOCKER_PASS"
+                        ssh -i \$EC2_KEY \$EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh \$DOCKER_USER"
                     """
                 }
             }
@@ -82,3 +73,4 @@ pipeline {
         }
     }
 }
+//add jenkinsfile
