@@ -58,4 +58,4 @@ pipeline {
         }
     }
 }
-//jenkinfile
+//jenkin
