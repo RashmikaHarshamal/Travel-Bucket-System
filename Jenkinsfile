@@ -64,6 +64,12 @@ pipeline {
                         )
                     ]) {
                         sh '''
+                        ),
+                        file(credentialsId: 'terraform-tfvars', variable: 'TF_VARS_FILE')
+                    ]) {
+                        sh '''
+                            echo "🌍 Provisioning infrastructure with Terraform..."
+                            cp "$TF_VARS_FILE" terraform.tfvars
                             terraform init -input=false
                             terraform fmt -check
                             terraform validate
