@@ -39,6 +39,42 @@ pipeline {
             }
         }
 
+        stage('Terraform Apply') {
+            steps {
+                dir("${WORKSPACE}/infra") {
+                    script {
+                        if (env.TF_VARS_CREDENTIAL_ID) {
+                            withCredentials([string(credentialsId: env.TF_VARS_CREDENTIAL_ID, variable: 'TF_VARS_CONTENT')]) {
+                                writeFile file: 'terraform.tfvars', text: env.TF_VARS_CONTENT
+                            }
+                        } else if (env.TF_VARS_CONTENT) {
+                            writeFile file: 'terraform.tfvars', text: env.TF_VARS_CONTENT
+                        }
+
+                        if (!fileExists('terraform.tfvars')) {
+                            error 'terraform.tfvars not found. Provide via TF_VARS_CREDENTIAL_ID (Jenkins string credential) or TF_VARS_CONTENT env/parameter, or commit terraform.tfvars.'
+                        }
+                    }
+
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'aws-access-key',
+                            usernameVariable: 'AWS_ACCESS_KEY_ID',
+                            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                        )
+                    ]) {
+                        sh '''
+                            terraform init -input=false
+                            terraform fmt -check
+                            terraform validate
+                            terraform plan -out=tfplan
+                            terraform apply -input=false -auto-approve tfplan
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Deploy to EC2') {
             steps {
                 withCredentials([
