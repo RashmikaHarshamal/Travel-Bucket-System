@@ -2,79 +2,60 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = credentials('dockerhub-creds')  // DockerHub username + password stored in Jenkins
-        AWS_KEY     = credentials('aws-access-key')   // AWS access key
-        AWS_SECRET  = credentials('aws-secret-key')   // AWS secret key
+        DOCKER_REPO = "rashmikaharshamal"
+        EC2_IP      = "13.53.103.213"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/RashmikaHarshamal/Travel-Bucket-System.git'
+                git branch: 'main',
+                    url: 'https://github.com/RashmikaHarshamal/Travel-Bucket-System.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                dir("${WORKSPACE}") {
-                    sh 'chmod +x ./scripts/build.sh'
-                    sh './scripts/build.sh'
-                }
+                sh '''
+                  chmod +x scripts/build.sh
+                  ./scripts/build.sh
+                '''
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                dir("${WORKSPACE}") {
-                    sh 'chmod +x ./scripts/push.sh'
-                    withCredentials([usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-                        sh './scripts/push.sh $DOCKER_USER $DOCKER_PASS'
-                    }
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      chmod +x scripts/push.sh
+                      ./scripts/push.sh $DOCKER_USER $DOCKER_PASS
+                    '''
                 }
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                dir("${WORKSPACE}/infra") {
-                    script {
-                        if (env.TF_VARS_CREDENTIAL_ID) {
-                            withCredentials([string(credentialsId: env.TF_VARS_CREDENTIAL_ID, variable: 'TF_VARS_CONTENT')]) {
-                                writeFile file: 'terraform.tfvars', text: env.TF_VARS_CONTENT
-                            }
-                        } else if (env.TF_VARS_CONTENT) {
-                            writeFile file: 'terraform.tfvars', text: env.TF_VARS_CONTENT
-                        }
-
-                        if (!fileExists('terraform.tfvars')) {
-                            error 'terraform.tfvars not found. Provide via TF_VARS_CREDENTIAL_ID (Jenkins string credential) or TF_VARS_CONTENT env/parameter, or commit terraform.tfvars.'
-                        }
-                    }
-
+                dir('infra') {
                     withCredentials([
                         usernamePassword(
                             credentialsId: 'aws-access-key',
                             usernameVariable: 'AWS_ACCESS_KEY_ID',
                             passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                        )
-                    ]) {
-                        sh '''
                         ),
                         file(credentialsId: 'terraform-tfvars', variable: 'TF_VARS_FILE')
                     ]) {
                         sh '''
-                            echo "🌍 Provisioning infrastructure with Terraform..."
-                            cp "$TF_VARS_FILE" terraform.tfvars
-                            terraform init -input=false
-                            terraform fmt -check
-                            terraform validate
-                            terraform plan -out=tfplan
-                            terraform apply -input=false -auto-approve tfplan
+                          cp $TF_VARS_FILE terraform.tfvars
+                          terraform init -input=false
+                          terraform validate
+                          terraform plan -out=tfplan
+                          terraform apply -auto-approve tfplan
                         '''
                     }
                 }
@@ -95,24 +76,22 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh """
-                        echo "🚀 Deploying Docker containers on EC2..."
-                        scp -i \$EC2_KEY scripts/deploy.sh \$EC2_USER@13.53.103.213:/home/\$EC2_USER/deploy.sh
-                        ssh -i \$EC2_KEY \$EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh \$DOCKER_USER"
-                    """
+                    sh '''
+                      chmod 600 $EC2_KEY
+                      scp -o StrictHostKeyChecking=no -i $EC2_KEY scripts/deploy.sh $EC2_USER@$EC2_IP:/home/$EC2_USER/deploy.sh
+                      ssh -o StrictHostKeyChecking=no -i $EC2_KEY $EC2_USER@$EC2_IP "chmod +x ~/deploy.sh && DOCKER_USER=$DOCKER_USER DOCKER_PASS=$DOCKER_PASS DOCKER_REPO=$DOCKER_REPO ~/deploy.sh"
+                    '''
                 }
             }
         }
-
     }
 
     post {
         success {
-            echo "✅ CI/CD pipeline completed successfully!"
+            echo "CI/CD pipeline completed successfully."
         }
         failure {
-            echo "❌ Pipeline failed. Check Jenkins console for details."
+            echo "Pipeline failed. Check logs."
         }
     }
 }
-//add jenkinsfile

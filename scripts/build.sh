@@ -1,13 +1,17 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "🔨 Building Docker images..."
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
 
-# Go to repo root
-cd "$(dirname "$0")/.."
+IMAGE_PREFIX="${DOCKER_REPO:-${DOCKER_USER:-travelbucket}}"
+BACKEND_TAG="${IMAGE_PREFIX}/backend:latest"
+FRONTEND_TAG="${IMAGE_PREFIX}/frontend:latest"
 
-# Build images for Travel Bucket project
-docker build -t travel-frontend:latest ./frontend
-docker build -t travel-backend:latest ./backend
+echo "Building backend image ${BACKEND_TAG}"
+docker build -t "$BACKEND_TAG" ./backend
 
-echo "✅ Docker images built successfully"
+echo "Building frontend image ${FRONTEND_TAG}"
+docker build -t "$FRONTEND_TAG" ./frontend
+
+echo "Docker images built"
