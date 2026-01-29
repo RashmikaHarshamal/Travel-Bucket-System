@@ -39,6 +39,31 @@ pipeline {
             }
         }
 
+        stage('Terraform Apply') {
+            steps {
+                dir("${WORKSPACE}/infra") {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'aws-access-key',
+                            usernameVariable: 'AWS_ACCESS_KEY_ID',
+                            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                        ),
+                        file(credentialsId: 'terraform-tfvars', variable: 'TF_VARS_FILE')
+                    ]) {
+                        sh '''
+                            echo "🌍 Provisioning infrastructure with Terraform..."
+                            cp "$TF_VARS_FILE" terraform.tfvars
+                            terraform init -input=false
+                            terraform fmt -check
+                            terraform validate
+                            terraform plan -out=tfplan
+                            terraform apply -input=false -auto-approve tfplan
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Deploy to EC2') {
             steps {
                 withCredentials([
