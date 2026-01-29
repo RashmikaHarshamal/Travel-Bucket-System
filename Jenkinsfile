@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = credentials('dockerhub-creds')  // DockerHub username + password stored in Jenkins
-        AWS_KEY     = credentials('aws-access-key')   // AWS access key
-        AWS_SECRET  = credentials('aws-secret-key')   // AWS secret key
+        DOCKER_USER = credentials('dockerhub-creds')
+        AWS_KEY     = credentials('aws-access-key')
+        AWS_SECRET  = credentials('aws-secret-key')
     }
 
     stages {
@@ -91,22 +91,16 @@ pipeline {
                 ]) {
                     sh """
                         echo "🚀 Deploying Docker containers on EC2..."
-                        scp -i \$EC2_KEY scripts/deploy.sh \$EC2_USER@13.53.103.213:/home/\$EC2_USER/deploy.sh
-                        ssh -i \$EC2_KEY \$EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh \$DOCKER_USER"
+                        scp -i $EC2_KEY scripts/deploy.sh $EC2_USER@13.53.103.213:/home/$EC2_USER/deploy.sh
+                        ssh -i $EC2_KEY $EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh $DOCKER_USER"
                     """
                 }
             }
         }
-
     }
 
     post {
-        success {
-            echo "✅ CI/CD pipeline completed successfully!"
-        }
-        failure {
-            echo "❌ Pipeline failed. Check Jenkins console for details."
-        }
+        success { echo "✅ CI/CD pipeline completed successfully!" }
+        failure { echo "❌ Pipeline failed. Check Jenkins console for details." }
     }
 }
-//add jenkinsfile
