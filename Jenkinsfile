@@ -17,15 +17,25 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                sh 'chmod +x ./scripts/build.sh'
-                sh './scripts/build.sh'
+                dir("${WORKSPACE}") {
+                    sh 'chmod +x ./scripts/build.sh'
+                    sh './scripts/build.sh'
+                }
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                sh 'chmod +x ./scripts/push.sh'
-                sh "./scripts/push.sh ${DOCKER_USER_USR} ${DOCKER_USER_PSW}"
+                dir("${WORKSPACE}") {
+                    sh 'chmod +x ./scripts/push.sh'
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh './scripts/push.sh $DOCKER_USER $DOCKER_PASS'
+                    }
+                }
             }
         }
 
@@ -36,13 +46,18 @@ pipeline {
                         credentialsId: 'ec2-ssh-key',
                         keyFileVariable: 'EC2_KEY',
                         usernameVariable: 'EC2_USER'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh '''
-                      echo "🚀 Deploying Docker containers on EC2..."
-                      scp -i $EC2_KEY scripts/deploy.sh $EC2_USER@13.53.103.213:/home/$EC2_USER/deploy.sh
-                      ssh -i $EC2_KEY $EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh ${DOCKER_USER_USR}"
-                    '''
+                    sh """
+                        echo "🚀 Deploying Docker containers on EC2..."
+                        scp -i \$EC2_KEY scripts/deploy.sh \$EC2_USER@13.53.103.213:/home/\$EC2_USER/deploy.sh
+                        ssh -i \$EC2_KEY \$EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh \$DOCKER_USER"
+                    """
                 }
             }
         }
@@ -58,4 +73,3 @@ pipeline {
         }
     }
 }
-//jenkinsfile
