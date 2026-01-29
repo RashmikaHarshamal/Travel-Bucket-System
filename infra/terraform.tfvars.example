@@ -1,0 +1,7 @@
+aws_region       = "us-east-1"
+instance_type    = "t3.micro"
+key_pair_name    = "travel-bucket-key"
+ssh_public_key   = "ssh-rsa AAA..."
+docker_user      = "rashmikaharshamal"
+allowed_ssh_cidr = "0.0.0.0/0"
+allowed_http_cidr = "0.0.0.0/0"
