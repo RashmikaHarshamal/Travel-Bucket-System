@@ -1,18 +1,17 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-DOCKER_USER=$1
-DOCKER_PASS=$2
+DOCKER_USER="$1"
+DOCKER_PASS="$2"
+IMAGE_PREFIX="${DOCKER_REPO:-$DOCKER_USER}"
 
-echo "🔐 Logging in to Docker Hub..."
+echo "Logging in to Docker Hub"
 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
-echo "🏷️ Tagging frontend and backend images..."
-docker tag travel-frontend:latest $DOCKER_USER/travel-frontend:latest
-docker tag travel-backend:latest  $DOCKER_USER/travel-backend:latest
+echo "Pushing backend image ${IMAGE_PREFIX}/backend:latest"
+docker push "${IMAGE_PREFIX}/backend:latest"
 
-echo "📤 Pushing images to Docker Hub..."
-docker push $DOCKER_USER/travel-frontend:latest
-docker push $DOCKER_USER/travel-backend:latest
+echo "Pushing frontend image ${IMAGE_PREFIX}/frontend:latest"
+docker push "${IMAGE_PREFIX}/frontend:latest"
 
-echo "✅ Images pushed successfully"
+echo "Images pushed"
