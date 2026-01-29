@@ -2,75 +2,74 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_DIR = "/mnt/d/Projects/Travel-Bucket-System"
-        FRONTEND_IMAGE = "travel-frontend"
-        BACKEND_IMAGE = "travel-backend"
-        DOCKER_HUB_USER = "rashmikaharshamal"
+        DOCKER_USER = credentials('dockerhub-creds')  // DockerHub username + password stored in Jenkins
+        AWS_KEY     = credentials('aws-access-key')   // AWS access key
+        AWS_SECRET  = credentials('aws-secret-key')   // AWS secret key
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Checkout Code') {
             steps {
-                echo "Pulling code from GitHub..."
-                checkout scm
+                git branch: 'main', url: 'https://github.com/RashmikaHarshamal/Travel-Bucket-System.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                dir("${PROJECT_DIR}/frontend") {
-                    echo "Building frontend Docker image..."
-                    sh "docker build -t ${FRONTEND_IMAGE}:latest ."
-                }
-
-                dir("${PROJECT_DIR}/backend") {
-                    echo "Building backend Docker image..."
-                    sh "docker build -t ${BACKEND_IMAGE}:latest ."
+                dir("${WORKSPACE}") {
+                    sh 'chmod +x ./scripts/build.sh'
+                    sh './scripts/build.sh'
                 }
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-pass', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    echo "Logging into Docker Hub..."
+                dir("${WORKSPACE}") {
+                    sh 'chmod +x ./scripts/push.sh'
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh './scripts/push.sh $DOCKER_USER $DOCKER_PASS'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'ec2-ssh-key',
+                        keyFileVariable: 'EC2_KEY',
+                        usernameVariable: 'EC2_USER'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     sh """
-                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                        
-                        echo "Tagging images..."
-                        docker tag ${FRONTEND_IMAGE}:latest ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
-                        docker tag ${BACKEND_IMAGE}:latest ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
-                        
-                        echo "Pushing images..."
-                        docker push ${DOCKER_HUB_USER}/${FRONTEND_IMAGE}:latest
-                        docker push ${DOCKER_HUB_USER}/${BACKEND_IMAGE}:latest
+                        echo "🚀 Deploying Docker containers on EC2..."
+                        scp -i \$EC2_KEY scripts/deploy.sh \$EC2_USER@13.53.103.213:/home/\$EC2_USER/deploy.sh
+                        ssh -i \$EC2_KEY \$EC2_USER@13.53.103.213 "chmod +x ~/deploy.sh && ~/deploy.sh \$DOCKER_USER"
                     """
                 }
             }
         }
 
-        stage('Run Containers') {
-            steps {
-                dir("${PROJECT_DIR}") {
-                    echo "Starting containers using docker-compose..."
-                    sh 'docker compose up -d'
-                }
-            }
-        }
-
-        stage('Check Running Containers') {
-            steps {
-                sh 'docker ps'
-            }
-        }
     }
 
     post {
         success {
-            echo '✅ Deployment and push successful! Both frontend and backend images are on Docker Hub.'
+            echo "✅ CI/CD pipeline completed successfully!"
         }
         failure {
-            echo '❌ Deployment or push failed!'
+            echo "❌ Pipeline failed. Check Jenkins console for details."
         }
     }
 }
