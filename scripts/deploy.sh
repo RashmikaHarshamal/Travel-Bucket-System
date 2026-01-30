@@ -15,8 +15,12 @@ detect_compose() {
 
 	echo "Docker Compose not found; attempting install via apt (requires sudo)."
 	if command -v sudo >/dev/null 2>&1; then
-		sudo apt-get update -y
-		sudo apt-get install -y docker-compose-plugin || sudo apt-get install -y docker-compose
+		# Some hosts have extra apt repos with missing keys; don't fail the deploy on apt update warnings.
+		sudo apt-get update -y || true
+		# Prefer Compose v2 plugin packages when available; fall back to legacy docker-compose.
+		sudo apt-get install -y docker-compose-plugin \
+			|| sudo apt-get install -y docker-compose-v2 \
+			|| sudo apt-get install -y docker-compose
 	else
 		echo "sudo not available; please install docker compose manually." >&2
 		return 1
@@ -61,38 +65,39 @@ cat > docker-compose.yml <<EOF
 version: "3.8"
 
 services:
-	mongo:
-		image: mongo:6
-		container_name: mongo
-		restart: unless-stopped
-		volumes:
-			- mongo_data:/data/db
-		ports:
-			- "27018:27017"
 
-	backend:
-		image: ${IMAGE_PREFIX}/backend:latest
-		container_name: backend
-		restart: unless-stopped
-		environment:
-			- SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/Travel_Bucket
-			- SPRING_PROFILES_ACTIVE=prod
-		depends_on:
-			- mongo
-		ports:
-			- "8081:8080"
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27018:27017"
 
-	frontend:
-		image: ${IMAGE_PREFIX}/frontend:latest
-		container_name: frontend
-		restart: unless-stopped
-		depends_on:
-			- backend
-		ports:
-			- "3000:80"
+  backend:
+    image: ${IMAGE_PREFIX}/backend:latest
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/Travel_Bucket
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8080"
+
+  frontend:
+    image: ${IMAGE_PREFIX}/frontend:latest
+    container_name: frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
 
 volumes:
-	mongo_data:
+  mongo_data:
 EOF
 
 $COMPOSE_CMD pull backend frontend mongo
