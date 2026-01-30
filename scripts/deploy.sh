@@ -1,15 +1,42 @@
 #!/bin/bash
 set -euo pipefail
 
-# Pick docker compose command (v2 plugin or legacy binary)
-if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-	COMPOSE_CMD="docker compose"
-elif command -v docker-compose >/dev/null 2>&1; then
-	COMPOSE_CMD="docker-compose"
-else
-	echo "Docker Compose is not installed on this host. Install the v2 plugin (preferred) or docker-compose." >&2
-	exit 1
-fi
+# Pick docker compose command (v2 plugin or legacy binary), auto-install if missing
+detect_compose() {
+	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+		COMPOSE_CMD="docker compose"
+		return 0
+	fi
+
+	if command -v docker-compose >/dev/null 2>&1; then
+		COMPOSE_CMD="docker-compose"
+		return 0
+	fi
+
+	echo "Docker Compose not found; attempting install via apt (requires sudo)."
+	if command -v sudo >/dev/null 2>&1; then
+		sudo apt-get update -y
+		sudo apt-get install -y docker-compose-plugin || sudo apt-get install -y docker-compose
+	else
+		echo "sudo not available; please install docker compose manually." >&2
+		return 1
+	fi
+
+	# Re-check after install
+	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+		COMPOSE_CMD="docker compose"
+		return 0
+	fi
+	if command -v docker-compose >/dev/null 2>&1; then
+		COMPOSE_CMD="docker-compose"
+		return 0
+	fi
+
+	echo "Docker Compose installation failed; please install manually." >&2
+	return 1
+}
+
+detect_compose
 
 # Accept credentials via env or positional args
 DOCKER_USER="${DOCKER_USER:-${1:-}}"
