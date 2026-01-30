@@ -42,6 +42,29 @@ detect_compose() {
 
 detect_compose
 
+# Free a port if a Docker container is already binding it
+free_docker_port() {
+	local port="$1"
+	local ids
+	ids=$(docker ps --format '{{.ID}} {{.Ports}}' | awk -v p=":${port}->" '$0 ~ p {print $1}')
+	if [[ -n "$ids" ]]; then
+		echo "Port ${port} is in use by existing container(s); removing them: ${ids}"
+		# shellcheck disable=SC2086
+		docker rm -f $ids || true
+	fi
+
+	# If still in use, it's likely a non-docker process (or a container we couldn't remove)
+	if command -v ss >/dev/null 2>&1; then
+		if ss -ltn 2>/dev/null | grep -q ":${port} "; then
+			echo "Port ${port} is still in use on the host (not freed by removing containers)." >&2
+			ss -ltnp 2>/dev/null | grep ":${port} " || true
+			return 1
+		fi
+	fi
+
+	return 0
+}
+
 # Accept credentials via env or positional args
 DOCKER_USER="${DOCKER_USER:-${1:-}}"
 DOCKER_PASS="${DOCKER_PASS:-${2:-}}"
@@ -102,6 +125,12 @@ EOF
 
 $COMPOSE_CMD pull backend frontend mongo
 $COMPOSE_CMD down --remove-orphans
+
+# Avoid port binding conflicts from containers outside this compose project
+free_docker_port 8081
+free_docker_port 3000
+free_docker_port 27018
+
 $COMPOSE_CMD up -d
 
 echo "Deployment completed"
