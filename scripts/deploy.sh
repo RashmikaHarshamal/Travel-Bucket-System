@@ -1,6 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
+# Pick docker compose command (v2 plugin or legacy binary)
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+	COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+	COMPOSE_CMD="docker-compose"
+else
+	echo "Docker Compose is not installed on this host. Install the v2 plugin (preferred) or docker-compose." >&2
+	exit 1
+fi
+
 # Accept credentials via env or positional args
 DOCKER_USER="${DOCKER_USER:-${1:-}}"
 DOCKER_PASS="${DOCKER_PASS:-${2:-}}"
@@ -58,9 +68,9 @@ volumes:
 	mongo_data:
 EOF
 
-docker compose pull backend frontend mongo
-docker compose down --remove-orphans
-docker compose up -d
+$COMPOSE_CMD pull backend frontend mongo
+$COMPOSE_CMD down --remove-orphans
+$COMPOSE_CMD up -d
 
 echo "Deployment completed"
 echo "Backend: http://localhost:8081"
