@@ -151,10 +151,19 @@ pipeline {
                             # Install Terraform if not present
                             if ! command -v terraform &> /dev/null; then
                                 echo "Installing Terraform..."
+                                
+                                # Install unzip if not present
+                                if ! command -v unzip &> /dev/null; then
+                                    echo "Installing unzip..."
+                                    sudo apt-get update -qq
+                                    sudo apt-get install -y -qq unzip
+                                fi
+                                
                                 wget -q https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
                                 unzip -o terraform_1.7.0_linux_amd64.zip
                                 sudo mv terraform /usr/local/bin/
                                 rm terraform_1.7.0_linux_amd64.zip
+                                echo "Terraform installed successfully"
                             fi
                             
                             terraform --version
