@@ -23,6 +23,8 @@ pipeline {
                         if (sudoOk == 0) {
                             env.DOCKER_USE_SUDO = '1'
                             echo "Docker socket requires sudo; using DOCKER_USE_SUDO=1 for subsequent stages."
+                        } else {
+                            echo "Docker is not accessible as 'jenkins' and passwordless sudo fallback is not available (sudo -n failed)."
                         }
                     }
                 }
@@ -38,6 +40,13 @@ pipeline {
                                     echo "Workspace: ${WORKSPACE:-<unset>}"
                                     echo "DOCKER_HOST: ${DOCKER_HOST:-<unset>}"
                                     echo "---------------------------"
+
+                                    if command -v sudo >/dev/null 2>&1; then
+                                        echo "Sudo check (may be restricted on agents):"
+                                        sudo -n true >/dev/null 2>&1 && echo "sudo -n: OK (passwordless)" || echo "sudo -n: NOT available (would prompt for password or not permitted)"
+                                    else
+                                        echo "sudo: not installed"
+                                    fi
 
                                     command -v docker >/dev/null 2>&1 || {
                                         echo "ERROR: docker CLI is required on the Jenkins agent (docker not found in PATH)."
