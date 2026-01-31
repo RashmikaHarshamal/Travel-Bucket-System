@@ -1,0 +1,61 @@
+# Operating System
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.iml
+
+# Jenkins
+.jenkins/
+jenkins_home/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Build artifacts
+dist/
+build/
+out/
+
+# CI/CD
+.pytest_cache/
+.coverage
+coverage/
+
+# AWS and Cloud
+*.pem
+*.ppk
+*.key
+aws-credentials.txt
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+*.priv

@@ -23,7 +23,7 @@ This folder provisions a single EC2 instance in the default VPC with security gr
 4) Use the `instance_public_ip` output for SSH and for your deploy script target. Security group already opens 8081 and 3000.
 
 ## Jenkins integration
-- The pipeline can run Terraform in `infra/`, then reads `output "instance_public_ip"` and uses it as the deploy target.
+- The pipeline can run Terraform in `terraform/`, then reads `output "instance_public_ip"` and uses it as the deploy target.
 - In Jenkins job parameters, set `SSH_PUBLIC_KEY` (public key material) and `KEY_PAIR_NAME`.
 - The same key pair must match the private key stored in Jenkins credentials (used for SSH during deploy).
 
