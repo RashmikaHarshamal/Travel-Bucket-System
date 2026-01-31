@@ -68,7 +68,7 @@ pipeline {
                         usernameVariable: 'EC2_USER'
                     )
                 ]) {
-                    sh '''
+                    sh '''#!/bin/bash
                                             set -euo pipefail
                                             EC2_IP="${EC2_IP}"
 
