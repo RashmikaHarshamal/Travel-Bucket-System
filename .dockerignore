@@ -1,0 +1,90 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+jenkins_home/
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE and Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.iml
+.project
+.classpath
+.settings/
+
+# Build artifacts
+**/target/
+**/build/
+**/dist/
+**/out/
+
+# Dependencies
+**/node_modules/
+**/.mvn/
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+**/.dockerignore
+
+# Terraform
+terraform/
+*.tf
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Scripts
+scripts/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Tests
+**/test/
+**/tests/
+**/__tests__/
+*.test.js
+*.spec.js
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+*~
+
+# SSH Keys
+*.pem
+*.ppk
+*.key
+id_rsa*

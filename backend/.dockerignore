@@ -1,5 +1,40 @@
-target
-.git
+# Build artifacts
+target/
+build/
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# Git
+.git/
 .gitignore
+.gitattributes
+
+# Docker
 Dockerfile
+.dockerignore
+
+# Documentation
 README.md
+*.md
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+logs/
+
+# Tests
+src/test/
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db

@@ -116,6 +116,60 @@ pipeline {
             }
         }
 
+        stage('Terraform Plan & Apply') {
+            when {
+                expression {
+                    return fileExists('terraform/main.tf')
+                }
+            }
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir('terraform') {
+                        sh '''#!/bin/bash
+                            set -euo pipefail
+                            
+                            # Install Terraform if not present
+                            if ! command -v terraform &> /dev/null; then
+                                echo "Installing Terraform..."
+                                wget -q https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
+                                unzip -o terraform_1.7.0_linux_amd64.zip
+                                sudo mv terraform /usr/local/bin/
+                                rm terraform_1.7.0_linux_amd64.zip
+                            fi
+                            
+                            terraform --version
+                            
+                            # Initialize Terraform
+                            terraform init
+                            
+                            # Plan
+                            terraform plan -out=tfplan
+                            
+                            # Apply (auto-approve for CI/CD)
+                            terraform apply -auto-approve tfplan
+                            
+                            # Export EC2 IP for deployment stage
+                            EC2_IP_OUTPUT=$(terraform output -raw instance_public_ip || echo "")
+                            if [ -n "$EC2_IP_OUTPUT" ]; then
+                                echo "EC2_IP=$EC2_IP_OUTPUT" > ../ec2_ip.env
+                            fi
+                        '''
+                    }
+                }
+                script {
+                    // Read EC2 IP from Terraform output and update environment
+                    if (fileExists('ec2_ip.env')) {
+                        def props = readFile('ec2_ip.env').trim()
+                        env.EC2_IP = props.split('=')[1]
+                        echo "Updated EC2_IP from Terraform: ${env.EC2_IP}"
+                    }
+                }
+            }
+        }
+
         stage('Build Docker Images') {
             steps {
                 sh '''
