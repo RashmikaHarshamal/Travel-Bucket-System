@@ -186,7 +186,7 @@ pipeline {
                                 echo "   aws_region        = \"us-east-1\""
                                 echo "   instance_type     = \"t3.micro\""
                                 echo "   key_pair_name     = \"travel-bucket-key\""
-                                echo "   ssh_public_key    = \"ssh-rsa AAAA...(your public key)\""
+                                echo "   ssh_public_key    = \"ssh-rsa AAAA...your public key\""
                                 echo "   docker_user       = \"rashmikaharshamal\""
                                 echo ""
                                 echo "Skipping Terraform provisioning. Using hardcoded EC2_IP for deployment."
