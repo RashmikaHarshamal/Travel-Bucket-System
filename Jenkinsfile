@@ -13,9 +13,49 @@ pipeline {
             steps {
                 sh '''#!/bin/bash
                   set -euo pipefail
-                  command -v bash >/dev/null 2>&1 || { echo "ERROR: bash is required on the Jenkins agent."; exit 1; }
-                  command -v docker >/dev/null 2>&1 || { echo "ERROR: docker CLI is required on the Jenkins agent."; exit 1; }
-                  docker version >/dev/null 2>&1 || { echo "ERROR: docker daemon is not reachable from this agent."; exit 1; }
+                                    command -v bash >/dev/null 2>&1 || { echo "ERROR: bash is required on the Jenkins agent."; exit 1; }
+
+                                    echo "---- Agent diagnostics ----"
+                                    echo "Hostname: $(hostname || true)"
+                                    echo "Kernel: $(uname -a || true)"
+                                    echo "User: $(whoami || true)"
+                                    id || true
+                                    echo "Workspace: ${WORKSPACE:-<unset>}"
+                                    echo "DOCKER_HOST: ${DOCKER_HOST:-<unset>}"
+                                    echo "---------------------------"
+
+                                    command -v docker >/dev/null 2>&1 || {
+                                        echo "ERROR: docker CLI is required on the Jenkins agent (docker not found in PATH)."
+                                        echo "Fix: Install Docker Engine/CLI (or add it to PATH), or run this pipeline on a Docker-capable agent."
+                                        exit 1
+                                    }
+
+                                    echo "Docker CLI: $(docker --version || true)"
+                                    if [ -S /var/run/docker.sock ]; then
+                                        echo "docker.sock: $(ls -l /var/run/docker.sock || true)"
+                                    else
+                                        echo "docker.sock: not found at /var/run/docker.sock"
+                                    fi
+
+                                    # Prefer docker info (more representative than docker version) and print helpful hints on failure.
+                                    if ! docker info >/dev/null 2>&1; then
+                                        echo "ERROR: docker daemon is not reachable from this agent."
+                                        echo ""
+                                        echo "Most common causes and fixes:"
+                                        echo "  1) Docker service not running on the agent"
+                                        echo "     - Ubuntu/Debian: sudo systemctl status docker ; sudo systemctl start docker"
+                                        echo "  2) Jenkins user lacks permission to access /var/run/docker.sock"
+                                        echo "     - sudo usermod -aG docker jenkins ; sudo systemctl restart docker ; then re-login/restart agent"
+                                        echo "  3) Agent is a container without the Docker socket mounted"
+                                        echo "     - Mount /var/run/docker.sock into the agent container, or use a dind/kaniko/buildah builder"
+                                        echo "  4) DOCKER_HOST points to an unavailable remote daemon"
+                                        echo "     - Verify DOCKER_HOST and connectivity"
+                                        echo ""
+                                        echo "Raw diagnostics (non-fatal):"
+                                        docker context ls || true
+                                        docker version || true
+                                        exit 1
+                                    fi
 
                   # Ensure scripts don't have CRLF line endings (common when committed from Windows)
                   sed -i 's/\r$//' scripts/*.sh || true
