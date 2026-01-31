@@ -4,7 +4,7 @@ Full-stack app:
 - Backend: Spring Boot + MongoDB
 - Frontend: React (Vite)
 
-## Quick start (recommended): Docker Compose
+## Quick start (recommended): Docker Compose file
 
 1) Start everything:
 
