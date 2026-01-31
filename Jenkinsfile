@@ -4,7 +4,7 @@ pipeline {
     parameters {
         string(name: 'AWS_REGION', defaultValue: 'us-east-1', description: 'AWS region for Terraform (infra/)')
         string(name: 'KEY_PAIR_NAME', defaultValue: 'travel-bucket-deployer', description: 'AWS EC2 key pair name to create/use')
-        text(name: 'SSH_PUBLIC_KEY', defaultValue: '', description: 'SSH public key material for EC2 access (e.g., contents of id_rsa.pub). Public key only.')
+        text(name: 'SSH_PUBLIC_KEY', defaultValue: '', description: 'Optional: SSH public key material for EC2 access (e.g., contents of id_rsa.pub). If empty, Jenkins will derive it from the ec2-ssh-key private key.')
         string(name: 'ALLOWED_SSH_CIDR', defaultValue: '0.0.0.0/0', description: 'CIDR allowed for SSH (22)')
         string(name: 'ALLOWED_HTTP_CIDR', defaultValue: '0.0.0.0/0', description: 'CIDR allowed for app ports (8081, 3000)')
         booleanParam(name: 'TERRAFORM_APPLY', defaultValue: true, description: 'If false, skip Terraform apply (deploy only)')
@@ -54,14 +54,30 @@ pipeline {
             }
 
             steps {
-                sh '''
-                  set -e
-                  if [ -z "${SSH_PUBLIC_KEY}" ]; then
-                    echo "ERROR: SSH_PUBLIC_KEY parameter is empty. Provide the public key (e.g. from ~/.ssh/id_rsa.pub)."
-                    exit 1
-                  fi
+                                withCredentials([
+                                        sshUserPrivateKey(
+                                                credentialsId: 'ec2-ssh-key',
+                                                keyFileVariable: 'EC2_KEY',
+                                                usernameVariable: 'EC2_USER'
+                                        )
+                                ]) {
+                                        sh '''
+                                            set -e
 
-                  cat > infra/terraform.tfvars <<EOF
+                                            # If the public key parameter isn't provided, derive it from the same private key used for SSH deploy.
+                                            if [ -z "${SSH_PUBLIC_KEY}" ]; then
+                                                if command -v ssh-keygen >/dev/null 2>&1; then
+                                                    SSH_PUBLIC_KEY="$(ssh-keygen -y -f "$EC2_KEY" 2>/dev/null || true)"
+                                                fi
+                                            fi
+
+                                            if [ -z "${SSH_PUBLIC_KEY}" ]; then
+                                                echo "ERROR: SSH_PUBLIC_KEY is empty and could not be derived (is the private key passphrase-protected, or is ssh-keygen missing?)."
+                                                echo "Provide SSH_PUBLIC_KEY in the Jenkins job parameters (public key only)."
+                                                exit 1
+                                            fi
+
+                                            cat > infra/terraform.tfvars <<EOF
 aws_region       = "${AWS_REGION}"
 key_pair_name    = "${KEY_PAIR_NAME}"
 ssh_public_key   = <<EOT
@@ -71,7 +87,8 @@ docker_user      = "${DOCKER_REPO}"
 allowed_ssh_cidr = "${ALLOWED_SSH_CIDR}"
 allowed_http_cidr = "${ALLOWED_HTTP_CIDR}"
 EOF
-                '''
+                                        '''
+                                }
 
                 sh '''
                   set -e
