@@ -142,7 +142,7 @@ pipeline {
         stage('Deploy to EC2') {
                         when {
                                 expression {
-                        return env.EC2_IP != null && env.EC2_IP.trim()
+                        return env.EC2_IP != null && env.EC2_IP != 'null' && env.EC2_IP.trim() != ''
                                 }
                         }
             steps {
