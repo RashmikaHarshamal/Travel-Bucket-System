@@ -62,54 +62,81 @@ pipeline {
                                         )
                                 ]) {
                                         sh '''
-                                            set -e
+                                                set -euo pipefail
 
-                                            # If the public key parameter isn't provided, derive it from the same private key used for SSH deploy.
-                                            if [ -z "${SSH_PUBLIC_KEY}" ]; then
-                                                if command -v ssh-keygen >/dev/null 2>&1; then
-                                                    SSH_PUBLIC_KEY="$(ssh-keygen -y -f "$EC2_KEY" 2>/dev/null || true)"
+                                                if [ ! -d "infra" ]; then
+                                                    echo "ERROR: infra/ directory not found in workspace."
+                                                    exit 1
                                                 fi
-                                            fi
 
-                                            if [ -z "${SSH_PUBLIC_KEY}" ]; then
-                                                echo "ERROR: SSH_PUBLIC_KEY is empty and could not be derived (is the private key passphrase-protected, or is ssh-keygen missing?)."
-                                                echo "Provide SSH_PUBLIC_KEY in the Jenkins job parameters (public key only)."
-                                                exit 1
-                                            fi
+                                                # If the public key parameter isn't provided, derive it from the same private key used for SSH deploy.
+                                                # Do it in a container so the Jenkins agent doesn't need ssh-keygen installed.
+                                                if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
+                                                    SSH_PUBLIC_KEY="$(docker run --rm -v "$EC2_KEY:/key:ro" alpine:3.19 sh -c 'apk add --no-cache openssh-client >/dev/null 2>&1 && ssh-keygen -y -f /key' 2>/dev/null || true)"
+                                                fi
 
-                                            cat > infra/terraform.tfvars <<EOF
-aws_region       = "${AWS_REGION}"
-key_pair_name    = "${KEY_PAIR_NAME}"
-ssh_public_key   = <<EOT
+                                                if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
+                                                    echo "ERROR: SSH_PUBLIC_KEY is empty and could not be derived from credential 'ec2-ssh-key'."
+                                                    echo "- Provide SSH_PUBLIC_KEY in Jenkins parameters (public key only), OR"
+                                                    echo "- Ensure the private key is not passphrase-protected."
+                                                    exit 1
+                                                fi
+
+                                                cat > infra/terraform.tfvars <<EOF
+aws_region        = "${AWS_REGION}"
+key_pair_name     = "${KEY_PAIR_NAME}"
+ssh_public_key    = <<EOT
 ${SSH_PUBLIC_KEY}
 EOT
-docker_user      = "${DOCKER_REPO}"
-allowed_ssh_cidr = "${ALLOWED_SSH_CIDR}"
+docker_user       = "${DOCKER_REPO}"
+allowed_ssh_cidr  = "${ALLOWED_SSH_CIDR}"
 allowed_http_cidr = "${ALLOWED_HTTP_CIDR}"
 EOF
                                         '''
                                 }
 
-                sh '''
-                  set -e
-                  docker run --rm \
-                    -v "$WORKSPACE/infra:/workspace" \
-                    -w /workspace \
-                    hashicorp/terraform:${TF_VERSION} \
-                    init
+                                sh '''
+                                    set -euo pipefail
 
-                  docker run --rm \
-                    -v "$WORKSPACE/infra:/workspace" \
-                    -w /workspace \
-                    hashicorp/terraform:${TF_VERSION} \
-                    apply -auto-approve
-                '''
+                                    if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+                                        echo "ERROR: AWS credentials are not available to the pipeline."
+                                        echo "Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as Jenkins credentials/environment variables for this job."
+                                        exit 1
+                                    fi
+
+                                    docker run --rm \
+                                        -e AWS_ACCESS_KEY_ID \
+                                        -e AWS_SECRET_ACCESS_KEY \
+                                        -e AWS_SESSION_TOKEN \
+                                        -e AWS_DEFAULT_REGION=${AWS_REGION} \
+                                        -e AWS_REGION=${AWS_REGION} \
+                                        -v "$WORKSPACE/infra:/workspace" \
+                                        -w /workspace \
+                                        hashicorp/terraform:${TF_VERSION} \
+                                        init -input=false -no-color
+
+                                    docker run --rm \
+                                        -e AWS_ACCESS_KEY_ID \
+                                        -e AWS_SECRET_ACCESS_KEY \
+                                        -e AWS_SESSION_TOKEN \
+                                        -e AWS_DEFAULT_REGION=${AWS_REGION} \
+                                        -e AWS_REGION=${AWS_REGION} \
+                                        -v "$WORKSPACE/infra:/workspace" \
+                                        -w /workspace \
+                                        hashicorp/terraform:${TF_VERSION} \
+                                        apply -auto-approve -input=false -no-color
+                                '''
 
                 script {
                     def ec2Ip = sh(
                         script: '''
-                          set -e
+                                                    set -euo pipefail
                           docker run --rm \
+                                                        -e AWS_ACCESS_KEY_ID \
+                                                        -e AWS_SECRET_ACCESS_KEY \
+                                                        -e AWS_SESSION_TOKEN \
+                                                        -e AWS_DEFAULT_REGION=${AWS_REGION} \
+                                                        -e AWS_REGION=${AWS_REGION} \
                             -v "$WORKSPACE/infra:/workspace" \
                             -w /workspace \
                             hashicorp/terraform:${TF_VERSION} \
@@ -129,6 +156,11 @@ EOF
         }
 
         stage('Deploy to EC2') {
+                        when {
+                                expression {
+                                        return (env.EC2_IP != null && env.EC2_IP.trim()) || !params.TERRAFORM_APPLY
+                                }
+                        }
             steps {
                 withCredentials([
                     sshUserPrivateKey(
@@ -138,21 +170,30 @@ EOF
                     )
                 ]) {
                     sh '''
-                      set -e
-                      if [ -z "${EC2_IP}" ]; then
-                        echo "ERROR: EC2_IP is empty. Run Terraform stage (or set EC2_IP via environment)."
-                        exit 1
-                      fi
+                                            set -euo pipefail
+                                            if [ -z "${EC2_IP:-}" ]; then
+                                                echo "ERROR: EC2_IP is empty. Run Terraform stage (or export EC2_IP as a job env var/parameter)."
+                                                exit 1
+                                            fi
 
-                      chmod 600 $EC2_KEY
+                                            if [ ! -f "scripts/deploy.sh" ]; then
+                                                echo "ERROR: scripts/deploy.sh not found."
+                                                exit 1
+                                            fi
 
-                      scp -o StrictHostKeyChecking=no -i $EC2_KEY \
-                        scripts/deploy.sh \
-                        $EC2_USER@$EC2_IP:/home/$EC2_USER/deploy.sh
-
-                      ssh -o StrictHostKeyChecking=no -i $EC2_KEY \
-                        $EC2_USER@$EC2_IP \
-                        "chmod +x ~/deploy.sh && DOCKER_REPO=$DOCKER_REPO ~/deploy.sh"
+                                            # Use a container for ssh/scp so the Jenkins agent doesn't need openssh-client.
+                                            docker run --rm \
+                                                -e EC2_IP="${EC2_IP}" \
+                                                -e EC2_USER="${EC2_USER}" \
+                                                -e DOCKER_REPO="${DOCKER_REPO}" \
+                                                -v "$EC2_KEY:/key:ro" \
+                                                -v "$WORKSPACE/scripts:/scripts:ro" \
+                                                alpine:3.19 sh -c '
+                                                    set -e
+                                                    apk add --no-cache openssh-client >/dev/null 2>&1
+                                                    scp -o StrictHostKeyChecking=no -i /key /scripts/deploy.sh "$EC2_USER@$EC2_IP:/home/$EC2_USER/deploy.sh"
+                                                    ssh -o StrictHostKeyChecking=no -i /key "$EC2_USER@$EC2_IP" "chmod +x ~/deploy.sh && DOCKER_REPO=$DOCKER_REPO ~/deploy.sh"
+                                                '
                     '''
                 }
             }
