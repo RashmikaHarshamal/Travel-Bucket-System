@@ -3,8 +3,7 @@ pipeline {
 
     environment {
         DOCKER_REPO = "rashmikaharshamal"
-        // Set this in Jenkins global env (Manage Jenkins -> System -> Global properties)
-        EC2_IP = "${env.EC2_IP}"
+        EC2_IP = "65.0.12.58"
 
         // Auto-set in Preflight when needed. When set to 1, scripts will run `sudo -n docker ...`.
         DOCKER_USE_SUDO = "0"
