@@ -13,7 +13,7 @@ pipeline {
 
         stage('Preflight') {
             steps {
-                sh '''
+                sh '''#!/bin/bash
                   set -euo pipefail
                   command -v bash >/dev/null 2>&1 || { echo "ERROR: bash is required on the Jenkins agent."; exit 1; }
                   command -v docker >/dev/null 2>&1 || { echo "ERROR: docker CLI is required on the Jenkins agent."; exit 1; }
