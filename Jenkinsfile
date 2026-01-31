@@ -120,7 +120,23 @@ pipeline {
         stage('Terraform Plan & Apply') {
             when {
                 expression {
-                    return fileExists('terraform/main.tf')
+                    // Only run if terraform files exist AND AWS credentials are configured
+                    if (!fileExists('terraform/main.tf')) {
+                        return false
+                    }
+                    try {
+                        // Check if AWS credentials exist
+                        withCredentials([
+                            string(credentialsId: 'aws-access-key-id', variable: 'AWS_KEY'),
+                            string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET')
+                        ]) {
+                            return true
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️ Terraform stage skipped: AWS credentials not configured in Jenkins"
+                        echo "To enable: Add 'aws-access-key-id' and 'aws-secret-access-key' credentials"
+                        return false
+                    }
                 }
             }
             steps {
