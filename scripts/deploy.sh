@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${DOCKER_USE_SUDO:-0}" == "1" ]]; then
+	DOCKER=(sudo -n docker)
+else
+	DOCKER=(docker)
+fi
+
 # Pick docker compose command (v2 plugin or legacy binary), auto-install if missing
 detect_compose() {
-	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+	if command -v docker >/dev/null 2>&1 && "${DOCKER[@]}" compose version >/dev/null 2>&1; then
 		COMPOSE_CMD="docker compose"
 		return 0
 	fi
@@ -27,7 +33,7 @@ detect_compose() {
 	fi
 
 	# Re-check after install
-	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+	if command -v docker >/dev/null 2>&1 && "${DOCKER[@]}" compose version >/dev/null 2>&1; then
 		COMPOSE_CMD="docker compose"
 		return 0
 	fi
@@ -46,11 +52,11 @@ detect_compose
 free_docker_port() {
 	local port="$1"
 	local ids
-	ids=$(docker ps --format '{{.ID}} {{.Ports}}' | awk -v p=":${port}->" '$0 ~ p {print $1}')
+	ids=$("${DOCKER[@]}" ps --format '{{.ID}} {{.Ports}}' | awk -v p=":${port}->" '$0 ~ p {print $1}')
 	if [[ -n "$ids" ]]; then
 		echo "Port ${port} is in use by existing container(s); removing them: ${ids}"
 		# shellcheck disable=SC2086
-		docker rm -f $ids || true
+		"${DOCKER[@]}" rm -f $ids || true
 	fi
 
 	# If still in use, it's likely a non-docker process (or a container we couldn't remove)
@@ -81,7 +87,7 @@ cd "$WORKDIR"
 
 if [[ -n "${DOCKER_PASS}" ]]; then
 	echo "Logging in to Docker Hub"
-	echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+	echo "$DOCKER_PASS" | "${DOCKER[@]}" login -u "$DOCKER_USER" --password-stdin
 fi
 
 cat > docker-compose.yml <<EOF
