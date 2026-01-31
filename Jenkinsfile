@@ -11,6 +11,20 @@ pipeline {
 
     stages {
 
+        stage('Preflight') {
+            steps {
+                sh '''
+                  set -euo pipefail
+                  command -v bash >/dev/null 2>&1 || { echo "ERROR: bash is required on the Jenkins agent."; exit 1; }
+                  command -v docker >/dev/null 2>&1 || { echo "ERROR: docker CLI is required on the Jenkins agent."; exit 1; }
+                  docker version >/dev/null 2>&1 || { echo "ERROR: docker daemon is not reachable from this agent."; exit 1; }
+
+                  # Ensure scripts don't have CRLF line endings (common when committed from Windows)
+                  sed -i 's/\r$//' scripts/*.sh || true
+                '''
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
@@ -21,8 +35,7 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                  chmod +x scripts/build.sh
-                  ./scripts/build.sh
+                                    bash scripts/build.sh
                 '''
             }
         }
@@ -35,8 +48,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                      chmod +x scripts/push.sh
-                      ./scripts/push.sh $DOCKER_USER $DOCKER_PASS
+                      bash scripts/push.sh $DOCKER_USER $DOCKER_PASS
                     '''
                 }
             }
