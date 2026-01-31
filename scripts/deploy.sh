@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Pick docker compose command (v2 plugin or legacy binary), auto-install if missing
