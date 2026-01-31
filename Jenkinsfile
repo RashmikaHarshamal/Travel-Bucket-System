@@ -1,12 +1,10 @@
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'EC2_IP', defaultValue: '', description: 'Public IP of the EC2 instance to deploy to')
-    }
-
     environment {
         DOCKER_REPO = "rashmikaharshamal"
+        // Set this in Jenkins global env (Manage Jenkins -> System -> Global properties)
+        EC2_IP = "${env.EC2_IP}"
     }
 
     stages {
@@ -57,7 +55,7 @@ pipeline {
         stage('Deploy to EC2') {
                         when {
                                 expression {
-                                        return params.EC2_IP != null && params.EC2_IP.trim()
+                        return env.EC2_IP != null && env.EC2_IP.trim()
                                 }
                         }
             steps {
@@ -71,7 +69,7 @@ pipeline {
                     sh '''#!/bin/bash
                                             set -euo pipefail
                                             # Accept either a raw IP/DNS or a pasted URL like https://1.2.3.4
-                                            EC2_IP_RAW="${EC2_IP}"
+                                            EC2_IP_RAW="${EC2_IP-}"
                                             EC2_HOST="${EC2_IP_RAW#http://}"
                                             EC2_HOST="${EC2_HOST#https://}"
                                             EC2_HOST="${EC2_HOST%%/*}"
