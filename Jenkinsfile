@@ -12,6 +12,42 @@ pipeline {
 
     stages {
 
+        stage('Fix Docker Permissions (One-Time Setup)') {
+            when {
+                expression {
+                    // Only run if SKIP_DOCKER_FIX is not set to 'true'
+                    // After first successful run, set this in Jenkins job config to skip this stage
+                    return env.SKIP_DOCKER_FIX != 'true'
+                }
+            }
+            steps {
+                script {
+                    echo "Attempting to fix Docker permissions for jenkins user..."
+                    echo "This requires passwordless sudo for the fix script."
+                    
+                    def fixResult = sh(returnStatus: true, script: '''
+                        if ! sudo -n bash scripts/fix-jenkins-docker-permissions.sh; then
+                            echo "Failed to run fix script. Manual intervention required."
+                            exit 1
+                        fi
+                    ''')
+                    
+                    if (fixResult == 0) {
+                        echo "✓ Docker permissions fixed successfully!"
+                        echo ""
+                        echo "IMPORTANT: Jenkins must be restarted for group changes to take effect."
+                        echo "After this build completes, run on the EC2 agent:"
+                        echo "  sudo systemctl restart jenkins"
+                        echo ""
+                        echo "Then set SKIP_DOCKER_FIX=true in job configuration to skip this stage."
+                        
+                        // Give user time to see the message
+                        sleep(time: 5, unit: 'SECONDS')
+                    }
+                }
+            }
+        }
+
         stage('Preflight') {
             steps {
                 script {
