@@ -148,24 +148,29 @@ pipeline {
                         sh '''#!/bin/bash
                             set -euo pipefail
                             
-                            # Install Terraform if not present
-                            if ! command -v terraform &> /dev/null; then
-                                echo "Installing Terraform..."
+                            # Install Terraform in workspace (no sudo needed)
+                            TERRAFORM_VERSION="1.7.0"
+                            TERRAFORM_BIN="$WORKSPACE/terraform_bin/terraform"
+                            
+                            if [ ! -f "$TERRAFORM_BIN" ]; then
+                                echo "Installing Terraform ${TERRAFORM_VERSION} to workspace..."
+                                mkdir -p "$WORKSPACE/terraform_bin"
+                                cd "$WORKSPACE/terraform_bin"
                                 
-                                # Install unzip if not present
-                                if ! command -v unzip &> /dev/null; then
-                                    echo "Installing unzip..."
-                                    sudo apt-get update -qq
-                                    sudo apt-get install -y -qq unzip
-                                fi
+                                # Download pre-built binary
+                                wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
                                 
-                                wget -q https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
-                                unzip -o terraform_1.7.0_linux_amd64.zip
-                                sudo mv terraform /usr/local/bin/
-                                rm terraform_1.7.0_linux_amd64.zip
+                                # Extract without unzip (using python which is available)
+                                python3 -m zipfile -e terraform_${TERRAFORM_VERSION}_linux_amd64.zip .
+                                chmod +x terraform
+                                rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+                                
+                                cd -
                                 echo "Terraform installed successfully"
                             fi
                             
+                            # Use local Terraform binary
+                            export PATH="$WORKSPACE/terraform_bin:$PATH"
                             terraform --version
                             
                             # Initialize Terraform
