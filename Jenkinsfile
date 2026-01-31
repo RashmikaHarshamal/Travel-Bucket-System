@@ -12,42 +12,6 @@ pipeline {
 
     stages {
 
-        stage('Fix Docker Permissions (One-Time Setup)') {
-            when {
-                expression {
-                    // Only run if SKIP_DOCKER_FIX is not set to 'true'
-                    // After first successful run, set this in Jenkins job config to skip this stage
-                    return env.SKIP_DOCKER_FIX != 'true'
-                }
-            }
-            steps {
-                script {
-                    echo "Attempting to fix Docker permissions for jenkins user..."
-                    echo "This requires passwordless sudo for the fix script."
-                    
-                    def fixResult = sh(returnStatus: true, script: '''
-                        if ! sudo -n bash scripts/fix-jenkins-docker-permissions.sh; then
-                            echo "Failed to run fix script. Manual intervention required."
-                            exit 1
-                        fi
-                    ''')
-                    
-                    if (fixResult == 0) {
-                        echo "✓ Docker permissions fixed successfully!"
-                        echo ""
-                        echo "IMPORTANT: Jenkins must be restarted for group changes to take effect."
-                        echo "After this build completes, run on the EC2 agent:"
-                        echo "  sudo systemctl restart jenkins"
-                        echo ""
-                        echo "Then set SKIP_DOCKER_FIX=true in job configuration to skip this stage."
-                        
-                        // Give user time to see the message
-                        sleep(time: 5, unit: 'SECONDS')
-                    }
-                }
-            }
-        }
-
         stage('Preflight') {
             steps {
                 script {
@@ -107,19 +71,32 @@ pipeline {
                                     if ! "${DOCKER[@]}" info >/dev/null 2>&1; then
                                         echo "ERROR: docker daemon is not reachable from this agent."
                                         echo ""
-                                        echo "Most common causes and fixes:"
-                                        echo "  1) Docker service not running on the agent"
-                                        echo "     - Ubuntu/Debian: sudo systemctl status docker ; sudo systemctl start docker"
-                                        echo "  2) Jenkins user lacks permission to access /var/run/docker.sock"
-                                        echo "     - sudo usermod -aG docker jenkins ; sudo systemctl restart docker ; then re-login/restart agent"
-                                        echo "  3) Agent is a container without the Docker socket mounted"
-                                        echo "     - Mount /var/run/docker.sock into the agent container, or use a dind/kaniko/buildah builder"
-                                        echo "  4) DOCKER_HOST points to an unavailable remote daemon"
-                                        echo "     - Verify DOCKER_HOST and connectivity"
+                                        echo "╔════════════════════════════════════════════════════════════════════════════╗"
+                                        echo "║                         🔧 FIX REQUIRED                                    ║"
+                                        echo "╚════════════════════════════════════════════════════════════════════════════╝"
                                         echo ""
-                                        echo "Note: If you want this pipeline to auto-fallback to sudo, configure passwordless sudo for the Jenkins user:"
-                                        echo "  - In /etc/sudoers.d/jenkins-docker: jenkins ALL=(root) NOPASSWD: /usr/bin/docker"
-                                        echo "  - Or add jenkins to docker group and restart Jenkins/agent"
+                                        echo "The 'jenkins' user cannot access Docker. SSH to the EC2 agent and run:"
+                                        echo ""
+                                        echo "────────────────────────────────────────────────────────────────────────────"
+                                        echo "# SSH to your Jenkins agent EC2 instance"
+                                        echo "ssh -i your-key.pem ubuntu@<EC2_IP>"
+                                        echo ""
+                                        echo "# Add jenkins to docker group"
+                                        echo "sudo usermod -aG docker jenkins"
+                                        echo ""
+                                        echo "# Restart Jenkins service to apply group changes"
+                                        echo "sudo systemctl restart jenkins"
+                                        echo ""
+                                        echo "# Verify the fix (should show containers)"
+                                        echo "sudo -u jenkins docker ps"
+                                        echo "────────────────────────────────────────────────────────────────────────────"
+                                        echo ""
+                                        echo "After restart, re-run this pipeline. It will succeed."
+                                        echo ""
+                                        echo "Alternative (if you can't restart Jenkins now):"
+                                        echo "  - Create /etc/sudoers.d/jenkins-docker with:"
+                                        echo "    jenkins ALL=(root) NOPASSWD: /usr/bin/docker"
+                                        echo "  - This pipeline will auto-use 'sudo docker' without restart"
                                         echo ""
                                         echo "Raw diagnostics (non-fatal):"
                                         docker context ls || true
