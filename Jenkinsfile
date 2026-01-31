@@ -172,6 +172,26 @@ pipeline {
                             export PATH="$WORKSPACE/terraform_bin:$PATH"
                             terraform --version
                             
+                            # Check if terraform.tfvars exists
+                            if [ ! -f "terraform.tfvars" ]; then
+                                echo "⚠️  terraform.tfvars not found!"
+                                echo ""
+                                echo "Terraform requires configuration. To enable infrastructure provisioning:"
+                                echo "1. SSH to Jenkins server: ssh ubuntu@65.0.12.58"
+                                echo "2. Create terraform.tfvars:"
+                                echo "   sudo nano /var/lib/jenkins/workspace/Travel_Bucket_Application/terraform/terraform.tfvars"
+                                echo ""
+                                echo "3. Add these values:"
+                                echo "   aws_region        = \"us-east-1\""
+                                echo "   instance_type     = \"t3.micro\""
+                                echo "   key_pair_name     = \"travel-bucket-key\""
+                                echo "   ssh_public_key    = \"ssh-rsa AAAA...(your public key)\""
+                                echo "   docker_user       = \"rashmikaharshamal\""
+                                echo ""
+                                echo "Skipping Terraform provisioning. Using hardcoded EC2_IP for deployment."
+                                exit 0
+                            fi
+                            
                             # Initialize Terraform
                             terraform init
                             
