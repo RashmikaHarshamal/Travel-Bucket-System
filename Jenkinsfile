@@ -70,7 +70,19 @@ pipeline {
                 ]) {
                     sh '''#!/bin/bash
                                             set -euo pipefail
-                                            EC2_IP="${EC2_IP}"
+                                            # Accept either a raw IP/DNS or a pasted URL like https://1.2.3.4
+                                            EC2_IP_RAW="${EC2_IP}"
+                                            EC2_HOST="${EC2_IP_RAW#http://}"
+                                            EC2_HOST="${EC2_HOST#https://}"
+                                            EC2_HOST="${EC2_HOST%%/*}"
+                                            # If user pasted host:port, strip the port for ssh/scp
+                                            EC2_HOST="${EC2_HOST%%:*}"
+
+                                            if [ -z "${EC2_HOST}" ]; then
+                                                echo "ERROR: EC2_IP is empty or invalid: '${EC2_IP_RAW}'"
+                                                echo "Provide a public IP or DNS name (optionally with http(s)://)."
+                                                exit 1
+                                            fi
 
                                             if [ ! -f "scripts/deploy.sh" ]; then
                                                 echo "ERROR: scripts/deploy.sh not found."
@@ -79,7 +91,7 @@ pipeline {
 
                                             # Use a container for ssh/scp so the Jenkins agent doesn't need openssh-client.
                                             docker run --rm \
-                                                -e EC2_IP="${EC2_IP}" \
+                                                -e EC2_IP="${EC2_HOST}" \
                                                 -e EC2_USER="${EC2_USER}" \
                                                 -e DOCKER_REPO="${DOCKER_REPO}" \
                                                 -v "$EC2_KEY:/key:ro" \
