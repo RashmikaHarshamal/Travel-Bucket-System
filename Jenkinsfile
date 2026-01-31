@@ -5,12 +5,27 @@ pipeline {
         DOCKER_REPO = "rashmikaharshamal"
         // Set this in Jenkins global env (Manage Jenkins -> System -> Global properties)
         EC2_IP = "${env.EC2_IP}"
+
+        // Auto-set in Preflight when needed. When set to 1, scripts will run `sudo -n docker ...`.
+        DOCKER_USE_SUDO = "0"
     }
 
     stages {
 
         stage('Preflight') {
             steps {
+                script {
+                    // If Docker daemon is reachable as-is, keep DOCKER_USE_SUDO=0.
+                    // If permission denied but passwordless sudo works, flip DOCKER_USE_SUDO=1.
+                    int directOk = sh(returnStatus: true, script: 'docker info >/dev/null 2>&1')
+                    if (directOk != 0) {
+                        int sudoOk = sh(returnStatus: true, script: 'sudo -n docker info >/dev/null 2>&1')
+                        if (sudoOk == 0) {
+                            env.DOCKER_USE_SUDO = '1'
+                            echo "Docker socket requires sudo; using DOCKER_USE_SUDO=1 for subsequent stages."
+                        }
+                    }
+                }
                 sh '''#!/bin/bash
                   set -euo pipefail
                                     command -v bash >/dev/null 2>&1 || { echo "ERROR: bash is required on the Jenkins agent."; exit 1; }
@@ -37,8 +52,14 @@ pipeline {
                                         echo "docker.sock: not found at /var/run/docker.sock"
                                     fi
 
+                                    if [[ "${DOCKER_USE_SUDO:-0}" == "1" ]]; then
+                                        DOCKER=(sudo -n docker)
+                                    else
+                                        DOCKER=(docker)
+                                    fi
+
                                     # Prefer docker info (more representative than docker version) and print helpful hints on failure.
-                                    if ! docker info >/dev/null 2>&1; then
+                                    if ! "${DOCKER[@]}" info >/dev/null 2>&1; then
                                         echo "ERROR: docker daemon is not reachable from this agent."
                                         echo ""
                                         echo "Most common causes and fixes:"
@@ -50,6 +71,10 @@ pipeline {
                                         echo "     - Mount /var/run/docker.sock into the agent container, or use a dind/kaniko/buildah builder"
                                         echo "  4) DOCKER_HOST points to an unavailable remote daemon"
                                         echo "     - Verify DOCKER_HOST and connectivity"
+                                        echo ""
+                                        echo "Note: If you want this pipeline to auto-fallback to sudo, configure passwordless sudo for the Jenkins user:"
+                                        echo "  - In /etc/sudoers.d/jenkins-docker: jenkins ALL=(root) NOPASSWD: /usr/bin/docker"
+                                        echo "  - Or add jenkins to docker group and restart Jenkins/agent"
                                         echo ""
                                         echo "Raw diagnostics (non-fatal):"
                                         docker context ls || true
@@ -127,8 +152,14 @@ pipeline {
                                                 exit 1
                                             fi
 
+                                            if [[ "${DOCKER_USE_SUDO:-0}" == "1" ]]; then
+                                                DOCKER=(sudo -n docker)
+                                            else
+                                                DOCKER=(docker)
+                                            fi
+
                                             # Use a container for ssh/scp so the Jenkins agent doesn't need openssh-client.
-                                            docker run --rm \
+                                            "${DOCKER[@]}" run --rm \
                                                 -e EC2_IP="${EC2_HOST}" \
                                                 -e EC2_USER="${EC2_USER}" \
                                                 -e DOCKER_REPO="${DOCKER_REPO}" \
