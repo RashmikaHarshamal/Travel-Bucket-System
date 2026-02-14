@@ -29,7 +29,7 @@ function Home() {
                 Map your <span>Future</span> with smart insights and build the <br />
                 <span>career</span> you’ve always <span>dreamed</span> of
               </h2>
-              <p data-swiper-parallax="-400">Call Now <span>9876543210</span></p>
+              <p data-swiper-parallax="-400">Call Now me <span>9876543210</span></p>
             </div>
           </div>
         </SwiperSlide>
