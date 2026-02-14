@@ -36,7 +36,7 @@ function Home() {
         <SwiperSlide>
           <div className="Header_slidee slide2">
             <div className="content">
-              <small data-swiper-parallax="-200">Travel Bucket System</small>
+              <small data-swiper-parallax="-200">W.P.Rashmika Harshamal</small>
               <h2 data-swiper-parallax="-300">
                 Map your <span>Future</span> Travels<br />
                 <span>interesting</span> and <span>well organized</span>
@@ -48,7 +48,7 @@ function Home() {
         <SwiperSlide>
           <div className="Header_slidee slide3">
             <div className="content">
-              <small data-swiper-parallax="-200">Travel Bucket System</small>
+              <small data-swiper-parallax="-200">W.P.Rashmika Harshamal</small>
               <h2 data-swiper-parallax="-300">
                 Map your <span>Future</span> Travels<br />
                 <span>interesting</span> and <span>well organized</span>
