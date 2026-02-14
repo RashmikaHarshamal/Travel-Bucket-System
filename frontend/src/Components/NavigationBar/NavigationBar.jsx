@@ -28,7 +28,7 @@ function NavigationBar() {
     return (
         <div className="nav_wrapper" ref={navbar}>
             <div className="logo">
-                <span>CAREER </span>MAP
+                <span>Travel </span>Bucket
             </div>
 
             {/* <ul ref={menu}>
