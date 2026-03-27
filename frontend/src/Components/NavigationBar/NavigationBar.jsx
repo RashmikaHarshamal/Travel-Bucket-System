@@ -1,56 +1,83 @@
-import React, { useRef, useEffect } from "react";
-import './NavigationBar.css'; // ✅ plain CSS
-import {Link, useNavigate} from 'react-router-dom';
+import React, { useRef, useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import "./NavigationBar.css";
+
+const NAV_LINKS = [
+  { label: "Home",        path: "/" },
+  { label: "Explore",     path: "/explore" },
+  { label: "Bucket Lists",path: "/bucketlists" },
+  { label: "Community",   path: "/community" },
+  { label: "About",       path: "/about" },
+];
 
 function NavigationBar() {
-    const menu = useRef();
-    const navbar = useRef();
+  const navbar   = useRef();
+  const menu     = useRef();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-    const menuHandler = () => {
-        menu.current.classList.toggle("shownNav");
+  /* scroll → frosted glass */
+  useEffect(() => {
+    const onScroll = () => {
+      navbar.current?.classList.toggle("navbarScroll", window.scrollY > 60);
     };
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            if (window.scrollY > 100) {
-                navbar.current.classList.add("navbarScroll");
-            } else {
-                navbar.current.classList.remove("navbarScroll");
-            }
-        };
+  /* close mobile menu on route change */
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+  const toggleMenu = () => setMenuOpen(prev => !prev);
 
-    const Navigate = useNavigate();
+  return (
+    <nav className="nav_wrapper" ref={navbar}>
 
-    return (
-        <div className="nav_wrapper" ref={navbar}>
-            <div className="logo">
-                <span>Travel </span>Bucket
-            </div>
+      {/* ── LOGO ── */}
+      <div className="logo" onClick={() => navigate("/")}>
+        <span className="logo__accent">Travel</span>&nbsp;Bucket
+        {/* <span className="logo__dot" /> */}
+      </div>
 
-            {/* <ul ref={menu}>
-                <li>Home</li>
-                <li>Services</li>
-                <li>Rooms</li>
-                <li>FoodMenu</li>
-                <li>Amenities</li>
-                <li>Testimonial</li>
-                <li>About Us</li>
-            </ul> */}
+      {/* ── NAV LINKS ──
+      <ul ref={menu} className={menuOpen ? "shownNav" : ""}>
+        {NAV_LINKS.map(({ label, path }) => (
+          <li
+            key={path}
+            className={location.pathname === path ? "active" : ""}
+            onClick={() => navigate(path)}
+          >
+            {label}
+          </li>
+        ))}
+      </ul> */}
 
-            <div className="Nav_btns">
-                <button onClick={()=>Navigate('/Login')}>LogIn</button>
-                {/* <i
-                    className="ri-menu-4-line"
-                    id="bars"
-                    onClick={menuHandler}
-                ></i> */}
-            </div>
-        </div>
-    );
+      {/* ── BUTTONS + HAMBURGER ──
+      <div className="Nav_btns">
+        <button
+          className="nav-btn-login"
+          onClick={() => navigate("/Login")}
+        >
+          Log In
+        </button>
+        <button
+          className="nav-btn-signup"
+          onClick={() => navigate("/Signup")}
+        >
+          Sign Up ✦
+        </button>
+
+        <button id="bars" onClick={toggleMenu} aria-label="Toggle menu">
+          {menuOpen
+            ? <i className="ri-close-line" />
+            : <i className="ri-menu-4-line" />
+          }
+        </button>
+      </div> */}
+
+    </nav>
+  );
 }
 
 export default NavigationBar;

@@ -162,8 +162,12 @@ const Inspiration = () => {
     : adventureIdeas.filter(adventure => adventure.category === activeCategory);
 
   return (
-    <div className="inspiration-page">
+
+    <div>
+
       <Navbar />
+      <div className="inspiration-page">
+      
       
       {/* Page Header */}
       <header className="inspiration-header">
@@ -261,6 +265,8 @@ const Inspiration = () => {
         </div>
       </section>
     </div>
+    </div>
+    
   );
 };
 

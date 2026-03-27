@@ -210,8 +210,12 @@ const Planner = () => {
   };
 
   return (
-    <div className="planner-page">
+
+    <div>
+
       <Navbar />
+
+      <div className="planner-page">
       
       {/* Page Header */}
       <header className="planner-header">
@@ -425,6 +429,7 @@ const Planner = () => {
           ))}
         </div>
       </section>
+    </div>
     </div>
   );
 };
